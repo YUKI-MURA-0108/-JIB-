@@ -45,9 +45,11 @@ body{background:#fff;color:var(--navy);font-family:-apple-system,'Hiragino Sans'
 .g-num{font-size:26px;font-weight:900;color:var(--navy);min-width:28px;text-align:center;line-height:1}
 .g-unit{font-size:13px;color:var(--gray);font-weight:600}
 .draw-btn .btn-group{font-size:11px;color:rgba(255,255,255,.55);letter-spacing:.5px;margin-top:2px}
-.avail-card{background:var(--navy);border-radius:14px;padding:.75rem 2.1rem;text-align:center;box-shadow:0 4px 16px rgba(0,40,120,.2)}
-.avail-num{font-size:54px;font-weight:900;color:var(--gold);line-height:1}
-.avail-lbl{font-size:11px;color:rgba(255,255,255,.55);margin-top:3px}
+.avail-card{background:var(--navy);border-radius:14px;padding:.75rem 1.2rem;text-align:center;box-shadow:0 4px 16px rgba(0,40,120,.2);width:100%;max-width:320px}
+
+.avail-num{font-size:48px;font-weight:900;color:var(--gold);line-height:1}
+.avail-lbl{font-size:11px;color:rgba(255,255,255,.45);margin-top:2px}
+
 .avail-card.empty .avail-num{color:#ff4466}
 .draw-btn{width:168px;height:168px;border-radius:50%;border:none;background:linear-gradient(145deg,var(--navy3),var(--navy));color:#fff;cursor:pointer;position:relative;box-shadow:0 5px 0 rgba(0,20,80,.28),0 0 0 9px rgba(0,61,165,.12),0 0 0 20px rgba(0,61,165,.05);animation:hb 2.2s ease-in-out infinite;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px}
 .draw-btn .bmt{font-size:23px;font-weight:900;letter-spacing:4px;line-height:1}
@@ -662,6 +664,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+
 /* ─── スケジュール定義 ─── */
 const SCHEDULE=[
   {date:'2026-03-27',label:'3/27(木)',hours:[11,12,13,14,15,16,17,18,19,20]},
@@ -731,19 +734,17 @@ function showScreen(id){
 /* ─── メイン画面更新 ─── */
 function updateMain(){
   var td=dtStr(), av=todayAvail(), card=$('avail-card');
-  // Check if today is in schedule
   var todayInSchedule=SCHEDULE.some(function(s){return s.date===td;});
   $('avail-num').textContent=av>0?av:'—';
   if(todayInSchedule&&av===0){
     $('avail-lbl').textContent='本日の枠は全て埋まっています';
     card.classList.add('empty');
   } else if(av>0){
-    $('avail-lbl').textContent='本日残り参加枠（'+td.slice(5).replace('-','/')+'）';
+    $('avail-lbl').textContent='本日残り参加枠';
     card.classList.remove('empty');
   } else {
-    // today not in schedule (before/after event)
     var nxt=SCHEDULE.find(function(s){return s.date>td;});
-    $('avail-lbl').textContent=nxt?nxt.label+' よりイベント開始':'イベント終了';
+    $('avail-lbl').textContent=nxt?nxt.label+' 開始':'イベント終了';
     card.classList.remove('empty');
   }
   renderSlotGrid();
@@ -1304,7 +1305,7 @@ function closeTicketOverlay(){
 function generateCustomerTicketPNG(day,time,people,code,cb){
   var cv=$('ct-canvas');
   if(!cv){ cv=document.createElement('canvas'); document.body.appendChild(cv); }
-  var W=750, H=1020;
+  var W=750, H=1000;
   cv.width=W; cv.height=H;
   var ctx=cv.getContext('2d');
 
@@ -1314,80 +1315,90 @@ function generateCustomerTicketPNG(day,time,people,code,cb){
 
   // ── ヘッダー ──
   ctx.fillStyle='#002878';
-  ctx.fillRect(0,0,W,130);
+  ctx.fillRect(0,0,W,118);
 
-  // JI BLUE
+  // JI BLUE ロゴ文字
   ctx.fillStyle='#ffffff';
-  ctx.font='bold 58px Impact,Arial Black,sans-serif';
+  ctx.font='bold 54px Impact,Arial Black,sans-serif';
   ctx.textAlign='left';
-  ctx.fillText('JI BLUE',28,90);
+  ctx.fillText('JI BLUE',28,78);
 
-  // タイトル
-  ctx.fillStyle='rgba(255,255,255,0.6)';
-  ctx.font='bold 20px -apple-system,Arial,sans-serif';
-  ctx.fillText('特別企画 参加チケット',28,120);
+  // サブタイトル
+  ctx.fillStyle='rgba(255,255,255,0.62)';
+  ctx.font='bold 19px -apple-system,Arial,sans-serif';
+  ctx.fillText('特別企画  参加チケット',28,108);
 
-  // ── カード ──
+  // ── 白カード ──
   ctx.fillStyle='#ffffff';
-  tRoundRect(ctx,24,148,W-48,660,20);
-  ctx.fillStyle='#002878';
-  ctx.fillRect(24,148,6,660);
+  tRoundRect(ctx,22,132,W-44,530,18);
 
-  // ── 情報 ──
-  var rows=[['日程',day],['時間帯',time],['参加人数',people]];
-  var ry=222;
-  rows.forEach(function(r,i){
-    ctx.fillStyle='#8898b0';
-    ctx.font='bold 22px -apple-system,Arial,sans-serif';
-    ctx.textAlign='left';
-    ctx.fillText(r[0],62,ry);
-    ctx.fillStyle='#002878';
-    ctx.font='bold 32px -apple-system,Arial,sans-serif';
-    ctx.fillText(r[1],210,ry);
-    ry+=80;
-    if(i<2){
+  // 左アクセントライン
+  ctx.fillStyle='#002878';
+  ctx.fillRect(22,132,5,530);
+
+  // ── 情報ブロック: ラベル上・値下 の2行スタイル ──
+  var infoItems=[
+    {lbl:'日　　程', val:day},
+    {lbl:'時 間 帯', val:time},
+    {lbl:'参加人数', val:people}
+  ];
+  var rowH=160, rowY=150;
+  infoItems.forEach(function(item,i){
+    var y=rowY+i*rowH;
+    // 区切り線 (最初の行以外の上)
+    if(i>0){
       ctx.strokeStyle='#e4eaf5'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.moveTo(52,ry-14); ctx.lineTo(W-52,ry-14); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(46,y-10); ctx.lineTo(W-46,y-10); ctx.stroke();
     }
+    // ラベル (小・グレー)
+    ctx.fillStyle='#8898b0';
+    ctx.font='bold 20px -apple-system,Arial,sans-serif';
+    ctx.textAlign='left';
+    ctx.fillText(item.lbl, 50, y+28);
+    // 値 (大・ネイビー)
+    ctx.fillStyle='#002878';
+    ctx.font='bold 36px -apple-system,Arial,sans-serif';
+    ctx.fillText(item.val, 50, y+80);
   });
 
-  // ── QRエリア ──
+  // ── QRエリア背景 ──
   ctx.fillStyle='#f0f4fb';
-  tRoundRect(ctx,52,464,W-104,354,16);
-  ctx.fillStyle='#6680a0';
-  ctx.font='21px -apple-system,Arial,sans-serif';
-  ctx.textAlign='center';
-  ctx.fillText('↓ スタッフへこのQRコードを提示',W/2,506);
+  tRoundRect(ctx,46,680,W-92,290,14);
 
-  var qrSize=210;
+  // QR説明
+  ctx.fillStyle='#6680a0';
+  ctx.font='20px -apple-system,Arial,sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('↓ スタッフへこのQRコードを提示',W/2,716);
+
+  var qrSize=196;
   var qrX=Math.round((W-qrSize)/2);
-  var qrY=524;
+  var qrY=730;
 
   var qrDiv=document.createElement('div');
   qrDiv.style.cssText='position:absolute;left:-9999px;top:0';
   document.body.appendChild(qrDiv);
 
   function finish(){
-    // コード
+    // ── コード番号 ──
     ctx.fillStyle='#002878';
-    ctx.font='bold 54px monospace';
+    ctx.font='bold 50px monospace';
     ctx.textAlign='center';
-    ctx.fillText(code,W/2,794);
+    // letter-spacingはCanvasでは非対応なので代替
+    var letters=code.split('');
+    var totalW=letters.length*38;
+    var startX=(W-totalW)/2+19;
+    letters.forEach(function(ch,i){
+      ctx.fillText(ch, startX+i*38, 952);
+    });
 
-    // フッター
+    // ── フッター ──
     ctx.fillStyle='#002878';
-    ctx.fillRect(0,840,W,H-840);
+    ctx.fillRect(0,968,W,H-968);
     ctx.fillStyle='rgba(255,255,255,0.65)';
-    ctx.font='21px -apple-system,Arial,sans-serif';
+    ctx.font='20px -apple-system,Arial,sans-serif';
     ctx.textAlign='center';
-    ctx.fillText('来場時にスタッフへご提示ください',W/2,884);
-    ctx.fillStyle='rgba(255,255,255,0.35)';
-    ctx.font='17px -apple-system,Arial,sans-serif';
-    ctx.fillText('QRコードをスキャンして入場確認します',W/2,914);
-    ctx.fillStyle='rgba(245,196,0,0.5)';
-    ctx.font='bold 16px -apple-system,Arial,sans-serif';
-    ctx.textAlign='right';
-    ctx.fillText('JI BLUE × SAMURAI BLUE',W-28,H-18);
+    ctx.fillText('来場時にスタッフへご提示ください',W/2,990);
 
     try{ cb(cv.toDataURL('image/png')); }catch(e){ cb(null); }
   }
@@ -1399,13 +1410,19 @@ function generateCustomerTicketPNG(day,time,people,code,cb){
       setTimeout(function(){
         try{
           var qi=qrDiv.querySelector('canvas')||qrDiv.querySelector('img');
-          if(qi){ ctx.fillStyle='#f0f4fb'; ctx.fillRect(qrX,qrY,qrSize,qrSize); ctx.drawImage(qi,qrX,qrY,qrSize,qrSize); }
+          if(qi){
+            ctx.fillStyle='#f0f4fb';
+            ctx.fillRect(qrX,qrY,qrSize,qrSize);
+            ctx.drawImage(qi,qrX,qrY,qrSize,qrSize);
+          }
         }catch(e){}
         qrDiv.remove(); finish();
       },400);
     }catch(e){ qrDiv.remove(); finish(); }
   } else { qrDiv.remove(); finish(); }
 }
+
+/* ─── お客様チケット生成 (JFA非表示・タイトル変更版) ─── */
 
 /* ─── 保存用QRオーバーレイ ─── */
 function openSaveQrOverlay(){
@@ -1489,17 +1506,19 @@ document.addEventListener('DOMContentLoaded', function(){
   /* 抽選ボタン */
   $('draw-btn').addEventListener('click', runDraw);
 
-  /* 当選/落選後 → 抽選画面へ */
-  $('btn-show-qr').addEventListener('click', openTicketOverlay);
-  $('btn-save-qr').addEventListener('click', openSaveQrOverlay);
-  $('btn-sqo-close').addEventListener('click', closeSaveQrOverlay);
-  $('btn-ticket-close').addEventListener('click', closeTicketOverlay);
+  /* 当選/落選後 */
   $('btn-next-win').addEventListener('click', function(){
     closeTicketOverlay();
     showScreen('lottery');
     updateMain();
   });
   $('btn-next-lose').addEventListener('click', function(){ showScreen('lottery'); updateMain(); });
+
+  /* 当選チケット表示 */
+  $('btn-show-qr').addEventListener('click', openTicketOverlay);
+  $('btn-ticket-close').addEventListener('click', closeTicketOverlay);
+  $('btn-save-qr').addEventListener('click', openSaveQrOverlay);
+  $('btn-sqo-close').addEventListener('click', closeSaveQrOverlay);
 
   /* 管理画面 */
   $('btn-admin-back').addEventListener('click', function(){ showScreen('lottery'); updateMain(); });
@@ -1524,6 +1543,12 @@ document.addEventListener('DOMContentLoaded', function(){
       updateMain();
     }
   });
+  $('rate-slider').addEventListener('input', function(e){
+    winRate=parseInt(e.target.value,10);
+    $('rate-disp').textContent=winRate+'%';
+    save();
+  });
+
   /* コピーURLボタン */
   $('btn-copy-url').addEventListener('click', function(){
     var url=$('admin-url-display').textContent;
@@ -1535,7 +1560,6 @@ document.addEventListener('DOMContentLoaded', function(){
         setTimeout(function(){btn.textContent='コピー';},1500);
       });
     } else {
-      // iOS Safari fallback
       var el=document.createElement('textarea');
       el.value=url; el.style.position='fixed'; el.style.opacity='0';
       document.body.appendChild(el); el.select(); el.setSelectionRange(0,9999);
@@ -1547,7 +1571,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   });
 
-  /* PINの保存 */
+  /* PIN保存 */
   $('btn-pin-save').addEventListener('click', function(){
     var newPin=($('admin-pin-input').value||'').trim();
     if(newPin.length<4){ alert('PINは4文字以上で設定してください'); return; }
@@ -1560,19 +1584,11 @@ document.addEventListener('DOMContentLoaded', function(){
     setTimeout(function(){btn.textContent='保存';},1500);
   });
 
-  $('rate-slider').addEventListener('input', function(e){
-    winRate=parseInt(e.target.value,10);
-    $('rate-disp').textContent=winRate+'%';
-    save();
-  });
-
-  /* 入場確認画面カメラ */
-  $('btn-scan-open').addEventListener('click', startScan);
-  $('btn-scan-close').addEventListener('click', stopScan);
-
   /* 入場確認 */
   $('v-go').addEventListener('click', doVerify);
   $('v-input').addEventListener('keypress', function(e){ if(e.key==='Enter') doVerify(); });
+  $('btn-scan-open').addEventListener('click', startScan);
+  $('btn-scan-close').addEventListener('click', stopScan);
 
   /* ロゴ5回タップ → 管理画面 */
   $('logo-tap').addEventListener('click', function(){
@@ -1580,10 +1596,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if(logoTaps>=5){ logoTaps=0; openAdmin(); return; }
     logoTimer=setTimeout(function(){ logoTaps=0; },2000);
   });
-
-  /* 初期化 */
-  load();
-  updateMain();
 
   /* URL パラメータ処理 */
   var urlParams=new URLSearchParams(location.search);
@@ -1597,6 +1609,10 @@ document.addEventListener('DOMContentLoaded', function(){
       alert('PINが正しくありません');
     }
   }
+
+  /* 初期化 */
+  load();
+  updateMain();
 });
 </script>
 
