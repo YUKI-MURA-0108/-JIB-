@@ -292,32 +292,37 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 }
 .btn-sqo-close:active{background:rgba(255,255,255,.28)}
 .sqo-body{
-  flex:1;display:flex;align-items:center;justify-content:center;
-  gap:24px;padding:1.2rem;overflow:hidden
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;padding:1.4rem 1.2rem;overflow:auto
 }
-.sqo-qr-panel{display:flex;flex-direction:column;align-items:center;gap:10px}
+.sqo-qr-panel{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%}
 .sqo-qr{
-  background:#fff;border-radius:14px;padding:10px;
-  box-shadow:0 4px 20px rgba(0,0,0,.4)
+  background:#fff;border-radius:16px;padding:14px;
+  box-shadow:0 4px 24px rgba(0,0,0,.45);
+  display:inline-block
 }
 .sqo-code{
-  font-size:26px;font-weight:900;color:var(--gold);
-  letter-spacing:5px;font-family:monospace
+  font-size:28px;font-weight:900;color:var(--gold);
+  letter-spacing:6px;font-family:monospace;
+  background:rgba(255,255,255,.07);border-radius:10px;
+  padding:6px 20px
 }
+.sqo-scan-hint{font-size:13px;color:rgba(255,255,255,.5);font-weight:600;text-align:center}
 .sqo-warning{
   font-size:12px;color:#ffcc44;text-align:center;
   background:rgba(255,200,0,.1);border:1px solid rgba(255,200,0,.3);
   border-radius:8px;padding:8px 14px;line-height:1.6;max-width:240px
 }
 .sqo-info{
-  background:rgba(255,255,255,.07);border-radius:14px;
-  padding:.9rem 1.1rem;min-width:155px;
-  border:1px solid rgba(255,255,255,.1)
+  display:flex;gap:12px;justify-content:center;flex-wrap:wrap;width:100%;max-width:400px
 }
-.sqo-info-row{display:flex;flex-direction:column;margin-bottom:.6rem}
-.sqo-info-row:last-child{margin-bottom:0}
+.sqo-info-row{
+  background:rgba(255,255,255,.07);border-radius:10px;
+  padding:.5rem .9rem;border:1px solid rgba(255,255,255,.1);
+  display:flex;flex-direction:column;align-items:center;min-width:80px
+}
 .sqo-lbl{font-size:10px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.5px}
-.sqo-val{font-size:16px;font-weight:900;color:#fff;margin-top:1px}
+.sqo-val{font-size:15px;font-weight:900;color:#fff;margin-top:2px;white-space:nowrap}
 
 /* ─── お客様チケット画面 ─── */
 .customer-ticket-screen{
@@ -431,6 +436,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
     <!-- QR コード (iPadに表示) -->
     <div class="sqo-qr-panel" id="sqo-qr-panel">
       <div id="sqo-qr" class="sqo-qr"></div>
+      <div class="sqo-scan-hint">↑ カメラで読み取り</div>
       <div class="sqo-code" id="sqo-code"></div>
       <div id="sqo-warning" class="sqo-warning" style="display:none">
         ⚠ HTTPサーバー経由でアクセスしてください<br>
@@ -663,6 +669,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 
 /* ─── スケジュール定義 ─── */
@@ -1016,26 +1023,14 @@ function exportCSV(){
 /* ─── QRカメラスキャナー ─── */
 var scanStream=null;
 var scanIv=null;
-var barcodeDetector=null;
-
-function initBarcodeDetector(){
-  if(typeof BarcodeDetector!=='undefined'){
-    try{
-      barcodeDetector=new BarcodeDetector({formats:['qr_code']});
-      return true;
-    }catch(e){}
-  }
-  return false;
-}
 
 function startScan(){
   var area=$('scan-area');
   var video=$('scan-video');
   if(!area||!video) return;
 
-  // BarcodeDetector対応チェック
-  if(!initBarcodeDetector()){
-    alert('このブラウザはQRカメラ読み取りに対応していません。\nChromeの最新版をお使いください。\nコードを手入力してください。');
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    alert('このブラウザはカメラアクセスに対応していません。\nコードを手入力してください。');
     return;
   }
 
@@ -1043,7 +1038,7 @@ function startScan(){
   area.classList.remove('scan-ok');
 
   navigator.mediaDevices.getUserMedia({
-    video:{facingMode:'environment',width:{ideal:1280},height:{ideal:1280}}
+    video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:1280}}
   }).then(function(stream){
     scanStream=stream;
     video.srcObject=stream;
@@ -1051,25 +1046,31 @@ function startScan(){
     startDetectLoop(video);
   }).catch(function(err){
     area.classList.remove('active');
-    if(err.name==='NotAllowedError'){
+    if(err.name==='NotAllowedError'||err.name==='PermissionDeniedError'){
       alert('カメラへのアクセスが拒否されました。\nブラウザの設定でカメラを許可してください。');
     } else {
-      alert('カメラを起動できませんでした: '+err.message);
+      alert('カメラを起動できませんでした。\nコードを手入力してください。');
     }
   });
 }
 
 function startDetectLoop(video){
   if(scanIv) clearInterval(scanIv);
+  var cvs=document.createElement('canvas');
+  var ctx2=cvs.getContext('2d');
   scanIv=setInterval(function(){
-    if(!scanStream||!barcodeDetector) return;
-    if(video.readyState<2) return;
-    barcodeDetector.detect(video).then(function(codes){
-      if(codes.length===0) return;
-      var raw=codes[0].rawValue;
-      handleScannedCode(raw);
-    }).catch(function(){});
-  },300);
+    if(!scanStream||!video) return;
+    if(video.readyState<2||video.videoWidth===0) return;
+    cvs.width=video.videoWidth;
+    cvs.height=video.videoHeight;
+    ctx2.drawImage(video,0,0,cvs.width,cvs.height);
+    var imgData=ctx2.getImageData(0,0,cvs.width,cvs.height);
+    if(typeof jsQR==='undefined') return;
+    var result=jsQR(imgData.data,imgData.width,imgData.height,{inversionAttempts:'dontInvert'});
+    if(result&&result.data){
+      handleScannedCode(result.data);
+    }
+  },250);
 }
 
 function handleScannedCode(raw){
@@ -1456,7 +1457,7 @@ function openSaveQrOverlay(){
       +'&p='+encodeURIComponent(people);
     if(typeof QRCode!=='undefined'){
       try{
-        new QRCode(qrEl,{text:url,width:220,height:220,
+        new QRCode(qrEl,{text:url,width:240,height:240,
           colorDark:'#002878',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
       }catch(e){
         qrEl.style.cssText='width:220px;height:220px;background:rgba(255,255,255,.08);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;padding:10px';
